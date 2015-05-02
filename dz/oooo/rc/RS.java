@@ -13,16 +13,12 @@ import java.util.Scanner;
 
 public class RS {
 	private Hashtable<String, Node> nodes;
-	private Hashtable<String, Node> parcouruM1;
-	private Hashtable<String, Node> parcouruM2;
 	private String reponse;
 
 	//Constructeur
 	public RS()
 	{
 		this.nodes=new Hashtable<String, Node>();
-		this.parcouruM1=new Hashtable<String, Node>();
-		this.parcouruM2=new Hashtable<String, Node>();
 		this.reponse="";
 	}
 
@@ -37,12 +33,14 @@ public class RS {
 	//Méthode de marquage d'un noeud par le marquage M1
 	public void marquageM1(String node){
 		Node tmp=nodes.get(node);
+		tmp.addChemin(new Chemin(tmp),"M1");
 		tmp.setMarqueur(tmp.getMarqueur()+"M1");
 	}
 
 	//Méthode de marqauge d'un noeud par le marquage M2
 	public void marquageM2(String node){
 		Node tmp=nodes.get(node);
+		tmp.addChemin(new Chemin(tmp),"M2");
 		tmp.setMarqueur(tmp.getMarqueur()+"M2");
 	}
 
@@ -50,83 +48,100 @@ public class RS {
 	public void init(String nodeM1,String nodeM2,String relation,boolean unique){
 		marquageM1(nodeM1);
 		marquageM2(nodeM2);
-		this.parcouruM1.put(nodeM1, nodes.get(nodeM1));
-		this.parcouruM2.put(nodeM2, nodes.get(nodeM2));
-		propagation(nodes.get(nodeM1).getPredIsA(),nodes.get(nodeM2).getPredIsA(),relation,unique);
+		LinkedList<Node> listeM1=new LinkedList<Node>();
+		listeM1.add(nodes.get(nodeM1));
+		LinkedList<Node> listeM2=new LinkedList<Node>();
+		listeM1.add(nodes.get(nodeM2));
+		propagation(listeM1,listeM2,relation,unique);
 	}
 
-	//Méthode de propagation
-	public void propagation(LinkedList<Node> nodesM1,LinkedList<Node> nodesM2,String relation,boolean unique){
+	//Méthode de propagation de marquage
+	public void propagation(LinkedList<Node> m1EtapePrec,LinkedList<Node> m2EtapePrec,String relation,boolean unique){
 		if(unique){
 			reponse=rechercheUnique(relation);
-
 		}
 		else{
 			recherche(relation);
 		}
-
-		if(unique&&(!reponse.equals(""))){
-			System.out.println("Trouvé: "+reponse);
+		if(unique && !reponse.equals("")){
+			System.out.println("Réponse trouvée : "+reponse);
 		}
 		else{
-			LinkedList<Node> futureM1=new LinkedList<Node>();
-			if(!nodesM1.isEmpty()){
-				Iterator<Node> m1=nodesM1.iterator();
-				while(m1.hasNext()){
-					Node tmpM1=m1.next();
-					futureM1.addAll(suppressDouble(tmpM1.getPredIsA(),"M1"));
+			LinkedList<Node> m1EtapeCour=new LinkedList<Node>();
+			if(!m1EtapePrec.isEmpty()){
+				Iterator<Node> nodesM1=m1EtapePrec.iterator();
+				while(nodesM1.hasNext()){
+					//Pour chacun des noeuds marqués M1 dans l'étape précédante
+					Node tmp=nodesM1.next();
+					Iterator<Node> preds=tmp.getPredIsA().iterator();
+					while(preds.hasNext()){
+						//Pour chacun des prédecesseurs is-a des noeuds marqués M1 dans l'étape précédante
+						Node aMarque=preds.next();
+						Iterator<Chemin> chemins=tmp.getCheminsM1().iterator();
+						while(chemins.hasNext()){
+							//Et pour chacun des cheminsM1 qui ont menés au marquage du noeud tmp
+							Chemin tmpChemin=chemins.next();
+							if(tmpChemin.propagable(aMarque.getIsNot())){
+								
+								if(!tmpChemin.getNodes().containsKey(aMarque.getName())){
+									//Pour éviter les boucles réccurcives infinies
+									Chemin newChemin=new Chemin();
+									newChemin.getNodes().putAll(tmpChemin.getNodes());
+									newChemin.addNode(aMarque);
+									aMarque.addChemin(newChemin, "M1");
+									if(!aMarque.getMarqueur().contains("M1")){
+										aMarque.setMarqueur(aMarque.getMarqueur()+"M1");
+									}
+									m1EtapeCour.add(aMarque);
+								}
+							}
+						}
+					}
 				}
 			}
-			LinkedList<Node> futureM2=new LinkedList<Node>();
-			if(!nodesM2.isEmpty()){
-				Iterator<Node> m2=nodesM2.iterator();
-				while(m2.hasNext()){
-					Node tmpM2=m2.next();
-					futureM2.addAll(suppressDouble(tmpM2.getPredIsA(),"M2"));
+			LinkedList<Node> m2EtapeCour=new LinkedList<Node>();
+			if(!m2EtapePrec.isEmpty()){
+				Iterator<Node> nodesM2=m2EtapePrec.iterator();
+				while(nodesM2.hasNext()){
+					//Pour chacun des noeuds marqués M2 dans l'étape précédante
+					Node tmp=nodesM2.next();
+					Iterator<Node> preds=tmp.getPredIsA().iterator();
+					while(preds.hasNext()){
+						//Pour chacun des prédecesseurs is-a des noeuds marqués M2 dans l'étape précédante
+						Node aMarque=preds.next();
+						Iterator<Chemin> chemins=tmp.getCheminsM2().iterator();
+						while(chemins.hasNext()){
+							//Et pour chacun des cheminsM2 qui ont menés au marquage du noeud tmp
+							Chemin tmpChemin=chemins.next();
+							if(tmpChemin.propagable(aMarque.getIsNot())){
+								if(!tmpChemin.getNodes().containsKey(aMarque.getName())){
+									//Pour éviter les boucles réccurcives infinies
+									Chemin newChemin=new Chemin();
+									newChemin.getNodes().putAll(tmpChemin.getNodes());
+									newChemin.addNode(aMarque);
+									aMarque.addChemin(newChemin, "M2");
+									if(!aMarque.getMarqueur().contains("M2")){
+										aMarque.setMarqueur(aMarque.getMarqueur()+"M2");
+									}
+									m2EtapeCour.add(aMarque);
+								}
+							}
+						}
+					}
 				}
 			}
-			if(!(futureM1.isEmpty()&&futureM2.isEmpty())){
-				propagation(futureM1, futureM2, relation, unique);
-			}
-			else{
-				if(unique){
-					reponse=rechercheUnique(relation);
+			if(m1EtapeCour.isEmpty()&&m2EtapeCour.isEmpty()){
+				if(this.reponse.equals("")){
+					System.out.println("Aucune solution trouvée");
 				}
 				else{
-					recherche(relation);
-				}
-				if(reponse.equals("")){
-					System.out.println("pas de réponse");
-				}
-				else{
-					System.out.println("Réponse(s) trouvée(s): "+reponse);
-				}
-			}
-		}
-	}
-
-	//Méthode de suppression des doublons
-	public LinkedList<Node> suppressDouble(LinkedList<Node> nodes,String marque){
-		LinkedList<Node> liste=new LinkedList<Node>();
-		Iterator<Node> i=nodes.iterator();
-		while(i.hasNext()){
-			Node node=i.next();
-			if(marque.equals("M1")){	
-				if(!this.parcouruM1.containsKey(node.getName())){
-					liste.add(node);
-					this.parcouruM1.put(node.getName(), node);
-					node.setMarqueur(node.getMarqueur()+"M1");
+					System.out.println("Les réponses sont : "+this.reponse);
 				}
 			}
 			else{
-				if(!this.parcouruM2.containsKey(node.getName())){
-					liste.add(node);
-					this.parcouruM2.put(node.getName(), node);
-					node.setMarqueur(node.getMarqueur()+"M2");
-				}
+				propagation(m1EtapeCour, m2EtapeCour, relation, unique);
 			}
 		}
-		return liste;
 	}
 
 	//Méthode de recherche multiple
@@ -187,6 +202,13 @@ public class RS {
 		}
 	}
 	
+	//Méthode d'ajout d'excpetions
+	public void addExceptionLink(Node depart,String typeRelationCible,Node departDeRelationCible,Node finDeRelationCible){
+		if(typeRelationCible.equals("is-a")){
+			depart.addIsNot(finDeRelationCible);
+		}
+	}
+
 	//Méthode de création manuelle de réseaux sémantiques
 	public void manual(){
 		//Creátion de nodes
@@ -201,7 +223,7 @@ public class RS {
 		if(this.nodes.isEmpty()){
 			System.err.println("Le RS est vide!");
 		}
-		
+
 		//Création des relations
 		System.out.println("Donnez les relations, en terminant par le type 0");
 		System.out.println("Donnez le type de la relation");
@@ -217,13 +239,30 @@ public class RS {
 			typeR=sc.nextLine();
 		}
 		
+		//Création des liens d'exceptions
+		System.out.println("Donnez les relations d'exception du RS et terminez par noeud de départ 0");
+		System.out.println("Donnes le noued de départ de la relation d'exception");
+		String exNode=sc.nextLine();
+		while(!exNode.equals("0")){
+			System.out.println("Donnez le type de la relation cible de la relation d'exception");
+			String relationCible=sc.nextLine();
+			System.out.println("Donnez le nom du noeud source de la relation cible");
+			String debut=sc.nextLine();
+			System.out.println("Donnez le nom du noeud fin de la relation cible");
+			String fin=sc.nextLine();
+			addExceptionLink(this.nodes.get(exNode), relationCible, this.nodes.get(debut), this.nodes.get(fin));
+			System.out.println("relation crée");
+			System.out.println("Donnes le noued de départ de la relation d'exception");
+			exNode=sc.nextLine();
+		}
+		
 		sc.close();
 	}
 
 	//Lecture à partir d'un fichier d'un RS
 	public void fichier(String nomFichier) {
 		try {
-			BufferedReader br=new BufferedReader(new InputStreamReader(new FileInputStream("nomFichier")));
+			BufferedReader br=new BufferedReader(new InputStreamReader(new FileInputStream(nomFichier)));
 			String ligne=br.readLine();
 			while(ligne!=null){
 				String[] mots=ligne.split(",");
@@ -233,9 +272,13 @@ public class RS {
 				else if(mots[0].equals("relation")){
 					new Relation(mots[1],this.nodes.get(mots[2]),this.nodes.get(mots[3]));
 				}
+				else if(mots[0].equals("exception")){
+					addExceptionLink(this.nodes.get(mots[1]), mots[2], this.nodes.get(mots[3]), this.nodes.get(mots[4]));
+				}
+				ligne=br.readLine();
 			}
 			br.close();
-			
+
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

@@ -20,6 +20,8 @@ public class ClasseMain {
 				System.out.println("Le fichier doit impérativement respecter:");
 				System.out.println("Les noeuds sont déclarés node,nom_du_neud suivi d'un saut de ligne");
 				System.out.println("Les relations sont déclarées relation,type_de_relation,nom_du_noeud_début,non_noeud_fin suivi d'un saut de ligne");
+				System.out.println("Les relations d'exceptions sont déclarées\n"
+						+ "exception,nom_du_noeud_de_départ,type_de_relation_cible,noeud_départ_relation_cible,noeud_arrivé_relation_cible suivi d'un saut de ligne");
 				System.out.println("Donnez le chemin du fichier");
 				String chemin=sc.nextLine();
 				net.fichier(chemin);
@@ -128,6 +130,9 @@ public class ClasseMain {
 		
 		//Inférance
 		net.init(nodeM1,nodeM2,relation,unique);
+		
+		//affichermarquge
+		net.afficherMarquage();
 		
 		sc.close();
 	}
